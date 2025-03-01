@@ -30,7 +30,7 @@ public class HttpServer
             Console.WriteLine("Client connected.");
 
             // Use ThreadPool to handle the client connection
-            ThreadPool.QueueUserWorkItem(HttpHandler.HandleClient, client);
+            ThreadPool.QueueUserWorkItem(new HttpHandler(Logger.Instance).HandleClient, client);
         }
     }
 }

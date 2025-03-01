@@ -3,13 +3,22 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 
-public static class HttpHandler
+public class HttpHandler
 {
     // Define the root directory for static files
-    private static readonly string rootDirectory = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+    private readonly string rootDirectory;
+    // Dependency Injection for ILogger
+    private readonly ILogger logger;
+
+    // Constructor to receive ILogger instance
+    public HttpHandler(ILogger logger)
+    {
+        this.logger = logger;
+        rootDirectory = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+    }
 
     // Method to handle the client connection
-    public static void HandleClient(object clientObj)
+    public void HandleClient(object clientObj)
     {
         // Cast the object back to TcpClient
         TcpClient client = (TcpClient)clientObj;
@@ -24,14 +33,16 @@ public static class HttpHandler
             int bytesRead = stream.Read(buffer, 0, buffer.Length);
             string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
-            // Display the request in the console
-            Console.WriteLine("Request:");
-            Console.WriteLine(request);
+            // Log the request
+            logger.Info($"Request Received:\n{request}");
 
             // Extract the requested URL
             string[] requestLines = request.Split("\r\n");
             string[] requestLine = requestLines[0].Split(" ");
             string url = requestLine[1];
+
+            // Log the requested URL with timestamp
+            logger.Info($"Requested URL: {url}");
 
             // Default to index.html if no specific file is requested
             if (url == "/")
@@ -66,7 +77,7 @@ public static class HttpHandler
                 // Send the file contents
                 stream.Write(fileBytes, 0, fileBytes.Length);
 
-                Console.WriteLine($"Served: {url}");
+                logger.Info($"Served: {url}");
             }
             else
             {
@@ -81,12 +92,14 @@ public static class HttpHandler
                 byte[] responseBytes = Encoding.UTF8.GetBytes(response);
                 stream.Write(responseBytes, 0, responseBytes.Length);
 
-                Console.WriteLine($"404 Not Found: {url}");
+                // Log 404 errors
+                logger.Warning($"404 Not Found: {url}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            // Log exceptions
+            logger.Error($"Error: {ex.Message}");
         }
         finally
         {
@@ -96,7 +109,7 @@ public static class HttpHandler
     }
 
     // Determine the Content-Type based on the file extension
-    private static string GetContentType(string filePath)
+    private string GetContentType(string filePath)
     {
         string extension = Path.GetExtension(filePath).ToLower();
         return extension switch
